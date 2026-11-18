@@ -79,12 +79,41 @@ input[type=range]{accent-color:var(--amber);width:150px}
 #plist li span:last-child{color:#8d826c;font-size:12px}
 #rank li b{color:var(--amber)}
 .sep{border:0;border-top:1px solid rgba(233,223,200,.12);margin:16px 0}
+/* 2D 모드 */
+#v2d{position:fixed;inset:0;display:none;background:radial-gradient(ellipse at 50% 45%,#2a1a12 0%,#0b0807 75%)}
+body.m2d #v2d{display:block}
+body.m2d #gl,body.m2d #labels,body.m2d #vig{display:none}
+#t2d{position:absolute;border-radius:50%;background:radial-gradient(circle,#1f5a3a 0%,#0e2f1f 100%);border:10px solid #4a2a17;box-shadow:inset 0 0 40px rgba(0,0,0,.6),0 20px 60px #000}
+#b2d{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);border-radius:50%;border:0;padding:0;background:transparent;cursor:pointer;touch-action:none}
+#b2d i{position:absolute;inset:18%;border-radius:50% 50% 12% 12%/70% 70% 12% 12%;background:radial-gradient(circle at 35% 30%,#ffe7a3,#d9a441 45%,#8a5d18 100%);box-shadow:0 6px 0 #1a1a1a,0 8px 18px rgba(0,0,0,.6)}
+#b2d i:after{content:'';position:absolute;left:44%;top:-9%;width:12%;height:14%;border-radius:3px;background:#c8963a}
+#b2d:hover i{filter:brightness(1.2)}
+#b2d.hit i{animation:bshake .35s}
+@keyframes bshake{25%{transform:translateY(5px) scale(.96)}60%{transform:translateY(-1px)}}
+.s2{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:5px;transition:opacity .3s}
+.s2 .cards{display:flex;gap:6px;align-items:flex-end}
+.s2 .dk,.s2 .pl{border-radius:6px;background-size:cover;background-position:center;box-shadow:0 3px 8px rgba(0,0,0,.6);position:relative}
+.s2 .dk b{position:absolute;inset:auto 0 -2px 0;text-align:center;font-size:12px;color:var(--amber);text-shadow:0 1px 2px #000}
+.s2 .pl.empty{background:rgba(0,0,0,.18)!important;box-shadow:inset 0 0 0 1px rgba(233,223,200,.15)}
+.s2 .pl.pop{animation:pop .3s}
+@keyframes pop{0%{transform:translateY(-14px) scale(.7);opacity:.3}100%{transform:none;opacity:1}}
+.s2 .tg{font-size:12px;padding:2px 8px;border:1px solid rgba(232,176,74,.35);background:rgba(11,8,7,.8);border-radius:3px;white-space:nowrap}
+.s2 .tg .bt{font-size:9px;color:#8d826c;margin-left:4px}
+.s2.turn .tg{border-color:var(--amber);box-shadow:0 0 12px rgba(232,176,74,.5);color:var(--amber)}
+.s2.out{opacity:.35;filter:grayscale(1)}
+.s2.rang .cards{animation:rang .7s}
+@keyframes rang{30%{filter:drop-shadow(0 0 14px #e8b04a)}}
+.s2.me .dk{cursor:pointer}
+.s2 .sy{position:absolute;bottom:100%;margin-bottom:4px;font-size:12px;color:var(--ink);background:var(--bone);padding:2px 8px;border-radius:10px;white-space:nowrap;opacity:0;transition:opacity .25s}
+.s2 .sy.on{opacity:1}
+body.m2d #hint .h3d{display:none}
 @media (max-width:560px){#hint{display:none}.act{min-width:104px;padding:14px 12px}.panel{padding:22px 18px}}
 </style>
 </head>
 <body>
 <canvas id="gl"></canvas>
 <div id="vig"></div>
+<div id="v2d"><div id="t2d"><button id="b2d" aria-label="벨"><i></i></button></div></div>
 <div id="labels"></div>
 <div id="banner"></div>
 <div id="room"></div>
@@ -94,7 +123,7 @@ input[type=range]{accent-color:var(--amber);width:150px}
   <div id="btns">
     <button class="act" id="bFlip">카드 넘기기<small>F / 내 덱 클릭</small></button>
   </div>
-  <div id="hint">벨: 마우스로 클릭<br>드래그: 시점 회전 · 휠: 확대<br>R / 더블클릭: 시점 초기화</div>
+  <div id="hint">벨: 마우스로 클릭<span class="h3d"><br>드래그: 시점 회전 · 휠: 확대<br>R / 더블클릭: 시점 초기화</span></div>
 </div>
 <button id="gear" aria-label="설정">⚙</button>
 
@@ -113,6 +142,7 @@ input[type=range]{accent-color:var(--amber);width:150px}
     </ul>
     <div class="row"><span>이름</span><input type="text" id="inName" maxlength="8" placeholder="닉네임"></div>
     <div class="row"><span>캐릭터</span><div class="chars" id="charPick"></div></div>
+    <div class="row"><span>화면 <small id="modeNote" style="color:#8d826c"></small></span><div class="seg" id="modeSeg"><button data-m="3">3D</button><button data-m="2">2D (가벼움)</button></div></div>
     <button class="go" id="bHost">방 만들기</button>
     <div class="join"><input type="text" id="inCode" maxlength="4" placeholder="코드"><button class="go alt" id="bJoin">참가</button></div>
     <div class="msg" id="startMsg"></div>
@@ -341,10 +371,16 @@ function neonTexture(){
 
 /* ---------- 씬 ---------- */
 const canvas=$('#gl');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-renderer.outputEncoding=THREE.sRGBEncoding;
-renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+let renderer=null, NO_GL=false, MODE2D=false;
+try{renderer=new THREE.WebGLRenderer({canvas,antialias:true});}catch(err){renderer=null;}
+if(!renderer){NO_GL=true;}
+else{
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  renderer.outputEncoding=THREE.sRGBEncoding;
+  renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+}
+try{MODE2D=NO_GL||localStorage.getItem('lb_2d')==='1';}catch(_){MODE2D=NO_GL;}
+document.body.classList.toggle('m2d',MODE2D);
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x050302);
 scene.fog=new THREE.FogExp2(0x070403,.075);
@@ -587,8 +623,69 @@ function buildSeats(infos){
     seats.push(s);
   });
   camBase=-my*TAU/N;
+  build2D();
   CAM0.ph=N>=7?.72:N>=5?.82:.95;Object.assign(cam,CAM0);
 }
+
+/* ---------- 2D 화면 ---------- */
+const v2d=$('#v2d'),t2d=$('#t2d'),b2d=$('#b2d');
+const faceURL={};
+function faceImg(c){const k=c.f+c.n;if(!faceURL[k])faceURL[k]='url('+getFace(c.f,c.n).image.toDataURL('image/png')+')';return faceURL[k];}
+let backURL='';
+function build2D(){
+  t2d.querySelectorAll('.s2').forEach(e=>e.remove());
+  if(!backURL)backURL='url('+backM.map.image.toDataURL('image/png')+')';
+  seats.forEach(s=>{
+    const e=document.createElement('div');e.className='s2'+(s.i===my?' me':'');
+    e.innerHTML='<div class="sy"></div><div class="cards"><div class="dk"><b></b></div><div class="pl empty"></div></div><div class="tg"><span class="n"></span><span class="bt">BOT</span></div>';
+    s.v2={e,dk:e.querySelector('.dk'),cnt:e.querySelector('.dk b'),pl:e.querySelector('.pl'),n:e.querySelector('.n'),bt:e.querySelector('.bt'),sy:e.querySelector('.sy'),key:''};
+    s.v2.dk.style.backgroundImage=backURL;
+    if(s.i===my)s.v2.dk.addEventListener('pointerdown',e2=>{e2.preventDefault();playerFlip();});
+    t2d.append(e);
+  });
+  layout2D();
+}
+function layout2D(){
+  if(!MODE2D||!seats.length)return;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const T=Math.min(vw*.94,(vh-150)*.92,760);
+  t2d.style.width=t2d.style.height=T+'px';t2d.style.left=(vw-T)/2+'px';t2d.style.top=Math.max(40,(vh-110-T)/2+20)+'px';
+  const cw=T*(N<=4?.15:N<=6?.125:.105),ch=cw*1.4;
+  b2d.style.width=b2d.style.height=(T*.24)+'px';
+  seats.forEach(s=>{
+    const rel=(s.i-my+N)%N,a=Math.PI/2+rel*TAU/N,r=T*.33;
+    const e=s.v2.e;e.style.left=(T/2+Math.cos(a)*r-10)+'px';e.style.top=(T/2+Math.sin(a)*r-10)+'px';
+    [s.v2.dk,s.v2.pl].forEach(c=>{c.style.width=cw+'px';c.style.height=ch+'px';});
+    s.v2.dk.style.width=(cw*.8)+'px';s.v2.dk.style.height=(ch*.8)+'px';
+  });
+}
+function render2D(){
+  seats.forEach(s=>{
+    const v=s.v2;if(!v)return;
+    const top=s.pile[s.pile.length-1],key=top?s.pile.length+':'+top.f+top.n:'';
+    if(key!==v.key){
+      if(top){v.pl.style.backgroundImage=faceImg(top);v.pl.classList.remove('empty');
+        if(s.pile.length>(+v.key.split(':')[0]||0)){v.pl.classList.remove('pop');void v.pl.offsetWidth;v.pl.classList.add('pop');}}
+      else{v.pl.style.backgroundImage='';v.pl.classList.add('empty');}
+      v.key=key;
+    }
+    v.dk.style.visibility=s.deck.length?'visible':'hidden';
+    v.cnt.textContent=s.deck.length;
+    if(v.n.textContent!==(s.i===my?s.name+' (나)':s.name))v.n.textContent=s.i===my?s.name+' (나)':s.name;
+    v.bt.style.display=s.bot?'':'none';
+    v.e.classList.toggle('turn',phase==='turn'&&turn===s.i&&s.active);
+    v.e.classList.toggle('out',!s.active);
+    if(v.sy.textContent!==s.sayEl.textContent)v.sy.textContent=s.sayEl.textContent;
+    v.sy.classList.toggle('on',s.sayEl.classList.contains('on'));
+  });
+}
+function ring2D(i){
+  const s=seats[i];if(!s||!s.v2)return;
+  s.v2.e.classList.remove('rang');void s.v2.e.offsetWidth;s.v2.e.classList.add('rang');
+  b2d.classList.remove('hit');void b2d.offsetWidth;b2d.classList.add('hit');
+}
+b2d.addEventListener('pointerdown',e=>{e.preventDefault();lastType=e.pointerType;playerRing();});
+b2d.addEventListener('contextmenu',e=>e.preventDefault());
 
 /* ---------- 트윈 ---------- */
 let tweens=[], temps=[];
@@ -679,7 +776,8 @@ function animFlip(i){
   });
 }
 function animRing(i){
-  const S=seats[i];if(!S)return;const paw=S.paws[0],r=paw.userData.rest;
+  const S=seats[i];if(!S)return;
+  if(MODE2D)ring2D(i);const paw=S.paws[0],r=paw.userData.rest;
   tween(.14,k=>{S.lean(k);paw.position.set(r.x*(1-k),r.y+(BELLY-r.y)*k+Math.sin(k*Math.PI)*.1,r.z+(.05-r.z)*k);},()=>{
     sfx.bell();
     tween(.12,k=>{bBtn.position.y=.17-.03*Math.sin(k*Math.PI);});
@@ -1012,6 +1110,14 @@ ROSTER.forEach((r,k)=>{const b=document.createElement('button');b.dataset.v=k;
 function syncChar(){cp.querySelectorAll('button').forEach(b=>b.classList.toggle('on',+b.dataset.v===me.ch));}
 cp.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;me.ch=+b.dataset.v;syncChar();buildPreview();});
 syncChar();
+function syncMode(){
+  document.querySelectorAll('#modeSeg button').forEach(b=>b.classList.toggle('on',(b.dataset.m==='2')===MODE2D));
+  document.body.classList.toggle('m2d',MODE2D);
+  if(NO_GL){$('#modeSeg button[data-m="3"]').disabled=true;$('#modeNote').textContent='(이 브라우저는 3D 불가)';}
+  if(MODE2D){build2D();}
+}
+$('#modeSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;
+  MODE2D=b.dataset.m==='2';try{localStorage.setItem('lb_2d',MODE2D?'1':'0');}catch(_){}syncMode();});
 $('#inName').value=me.name;
 const rc=(qs.get('room')||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
 if(rc){$('#inCode').value=rc;$('#bHost').classList.add('alt');$('#bJoin').classList.remove('alt');startMsg('초대받은 방: '+rc+' — 이름을 정하고 참가를 누르세요','#c8b88a');}
@@ -1123,7 +1229,7 @@ canvas.addEventListener('dblclick',()=>Object.assign(cam,CAM0));
 
 function resize(){
   const w=window.innerWidth,h=window.innerHeight;
-  renderer.setSize(w,h,false);camera.aspect=w/h;camera.fov=w<h?72:60;camera.updateProjectionMatrix();
+  if(renderer)renderer.setSize(w,h,false);layout2D();camera.aspect=w/h;camera.fov=w<h?72:60;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);resize();
 
@@ -1135,6 +1241,7 @@ function buildPreview(){
   seats.forEach(s=>{s.deck=new Array(14).fill({f:'lime',n:1});refresh(s);});
 }
 buildPreview();
+syncMode();
 
 /* ---------- 루프 ---------- */
 const v1=new THREE.Vector3(),clock=new THREE.Clock();
@@ -1162,7 +1269,8 @@ function frame(){
   gold.emissive.setHex(hoverBell&&gameStarted&&phase==='turn'?0x3a2408:0x000000);
   placeCam();
   {const hi=camera.position.y>2.3;shade.material.opacity=hi?.12:1;shade.material.depthWrite=!hi;bulb.visible=!hi;wire.visible=!hi;}
-  if(!NORENDER)renderer.render(scene,camera);
+  if(MODE2D)render2D();
+  else if(renderer&&!NORENDER)renderer.render(scene,camera);
   const w=window.innerWidth,h=window.innerHeight;
   // 손 자리 규칙 (PC 마우스만): 자리를 1초 넘게 비우면 헛손질
   const mouse=lastType==='mouse', on=mouse&&gameStarted&&playing()&&seats[my]&&seats[my].active;
@@ -1178,7 +1286,7 @@ function frame(){
   zlab.textContent=mouse&&needHome&&!inZone()?'손을 자리로':'손 자리';
   barEl.style.width=(warn?Math.max(0,1-away/AWAY)*100:100)+'%';
   seats.forEach(s=>{
-    if(s.i===my||!gameStarted){s.el.style.opacity=0;return;}
+    if(MODE2D||s.i===my||!gameStarted){s.el.style.opacity=0;return;}
     s.ch.g.getWorldPosition(v1);v1.y=1.84;v1.project(camera);
     if(v1.z>1){s.el.style.opacity=0;return;}
     s.el.style.opacity=1;s.el.style.left=Math.max(60,Math.min(w-60,(v1.x*.5+.5)*w))+'px';s.el.style.top=Math.max(60,(-v1.y*.5+.5)*h)+'px';
