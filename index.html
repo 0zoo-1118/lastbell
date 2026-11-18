@@ -1016,8 +1016,8 @@ $('#inName').value=me.name;
 const rc=(qs.get('room')||'').toUpperCase().replace(/[^A-Z]/g,'').slice(0,4);
 if(rc){$('#inCode').value=rc;$('#bHost').classList.add('alt');$('#bJoin').classList.remove('alt');startMsg('초대받은 방: '+rc+' — 이름을 정하고 참가를 누르세요','#c8b88a');}
 function readName(){
-  const v=$('#inName').value.trim().slice(0,8);
-  if(!v){startMsg('이름을 입력해 주세요');$('#inName').focus();return false;}
+  let v=$('#inName').value.trim().slice(0,8);
+  if(!v){v='손님'+(Math.random()*90+10|0);$('#inName').value=v;}
   me.name=v;try{localStorage.setItem('lb_name',v);localStorage.setItem('lb_ch',me.ch);}catch(_){}
   return true;
 }
