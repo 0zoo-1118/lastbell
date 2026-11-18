@@ -80,7 +80,7 @@ input[type=range]{accent-color:var(--amber);width:150px}
 #rank li b{color:var(--amber)}
 .sep{border:0;border-top:1px solid rgba(233,223,200,.12);margin:16px 0}
 /* 2D 모드 */
-#v2d{position:fixed;inset:0;display:none;background:radial-gradient(ellipse at 50% 45%,#2a1a12 0%,#0b0807 75%)}
+#v2d{position:fixed;inset:0;display:none;touch-action:none;overflow:hidden;background:radial-gradient(ellipse at 50% 45%,#2a1a12 0%,#0b0807 75%)}
 body.m2d #v2d{display:block}
 body.m2d #gl,body.m2d #labels,body.m2d #vig{display:none}
 #t2d{position:absolute;border-radius:50%;background:radial-gradient(circle,#1f5a3a 0%,#0e2f1f 100%);border:10px solid #4a2a17;box-shadow:inset 0 0 40px rgba(0,0,0,.6),0 20px 60px #000}
@@ -107,6 +107,30 @@ body.m2d #gl,body.m2d #labels,body.m2d #vig{display:none}
 .s2 .sy{position:absolute;bottom:100%;margin-bottom:4px;font-size:12px;color:var(--ink);background:var(--bone);padding:2px 8px;border-radius:10px;white-space:nowrap;opacity:0;transition:opacity .25s}
 .s2 .sy.on{opacity:1}
 body.m2d #hint .h3d{display:none}
+#hint .h2d{display:none}body.m2d #hint .h2d{display:inline}
+#z2d{position:fixed;right:14px;top:50%;transform:translateY(-50%);display:none;flex-direction:column;gap:6px;z-index:2}
+body.m2d.ing #z2d{display:flex}
+#z2d button{width:40px;height:40px;border-radius:4px;border:1px solid rgba(233,223,200,.25);background:rgba(20,14,11,.8);color:var(--bone);font-size:20px}
+/* 채팅 */
+#chat{position:fixed;left:14px;bottom:calc(92px + env(safe-area-inset-bottom));width:min(330px,72vw);z-index:5;display:none;pointer-events:none}
+body.ing #chat{display:block}
+#chatLog{display:flex;flex-direction:column;gap:3px;max-height:28vh;overflow:hidden;font-size:13px;line-height:1.45}
+#chatLog .cm{background:rgba(11,8,7,.62);padding:3px 9px;border-radius:4px;align-self:flex-start;max-width:100%;word-break:break-all;transition:opacity .6s}
+#chatLog .cm b{color:var(--amber);font-weight:700;margin-right:6px}
+#chatLog .cm.dead{opacity:.42}
+#chatLog .cm.dead b{color:#9a8f7a;font-weight:400}
+#chatLog .cm.old{opacity:0}
+#chat.open #chatLog{max-height:40vh;overflow-y:auto;pointer-events:auto;background:rgba(11,8,7,.55);padding:6px;border-radius:4px}
+#chat.open #chatLog .cm.old{opacity:1}
+#chat.open #chatLog .cm.dead.old{opacity:.42}
+#chatForm{display:none;gap:6px;margin-top:6px;pointer-events:auto}
+#chat.open #chatForm{display:flex}
+#chatIn{flex:1;min-width:0;padding:8px 10px;font-size:14px}
+#chatForm button{border:0;border-radius:4px;background:var(--amber);color:#1a1208;font-weight:700;padding:0 12px}
+#chatBtn{position:fixed;bottom:calc(132px + env(safe-area-inset-bottom));right:14px;width:40px;height:40px;border-radius:4px;border:1px solid rgba(233,223,200,.25);background:rgba(20,14,11,.8);color:var(--bone);font-size:12px;display:none;z-index:5}
+body.ing #chatBtn{display:block}
+#chatBtn.new{border-color:var(--amber);color:var(--amber)}
+body.m2d.ing #z2d{top:auto;bottom:calc(180px + env(safe-area-inset-bottom));transform:none}
 @media (max-width:560px){#hint{display:none}.act{min-width:104px;padding:14px 12px}.panel{padding:22px 18px}}
 </style>
 </head>
@@ -123,9 +147,12 @@ body.m2d #hint .h3d{display:none}
   <div id="btns">
     <button class="act" id="bFlip">카드 넘기기<small>F / 내 덱 클릭</small></button>
   </div>
-  <div id="hint">벨: 마우스로 클릭<span class="h3d"><br>드래그: 시점 회전 · 휠: 확대<br>R / 더블클릭: 시점 초기화</span></div>
+  <div id="hint">벨: 마우스로 클릭 · Enter: 채팅<span class="h2d"><br>휠·핀치: 확대 · 드래그: 이동<br>더블클릭: 원래대로</span><span class="h3d"><br>드래그: 시점 회전 · 휠: 확대<br>R / 더블클릭: 시점 초기화</span></div>
 </div>
 <button id="gear" aria-label="설정">⚙</button>
+<div id="chat"><div id="chatLog"></div><form id="chatForm" autocomplete="off"><input type="text" id="chatIn" maxlength="80" placeholder="메시지 입력 (Enter)"><button type="submit">보내기</button></form></div>
+<button id="chatBtn" aria-label="채팅">채팅</button>
+<div id="z2d"><button id="zIn" aria-label="확대">+</button><button id="zOut" aria-label="축소">−</button><button id="zRe" aria-label="원래대로" style="font-size:14px">⟲</button></div>
 
 <!-- 시작 -->
 <div class="ov" id="ovStart">
@@ -156,8 +183,10 @@ body.m2d #hint .h3d{display:none}
     <div class="row" style="align-items:flex-end"><div><div class="st">방 코드</div><div class="code" id="lbCode">----</div></div><button class="go alt" id="bCopy" style="width:auto;margin:0;padding:10px 14px">초대 링크 복사</button></div>
     <div class="st" id="netSt"></div>
     <ul id="plist"></ul>
+    <div class="st" id="lbCards"></div>
     <div id="hostOpts">
-      <div class="row"><span>총 자리 수 <small style="color:#8d826c">(빈자리는 봇)</small></span><div class="seg" data-k="seats"><button data-v="4">4</button><button data-v="5">5</button><button data-v="6" class="on">6</button><button data-v="7">7</button><button data-v="8">8</button></div></div>
+      <div class="row"><span>총 인원 <small style="color:#8d826c">(빈자리는 봇)</small></span><div class="seg" data-k="seats"><button data-v="0">사람만</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button><button data-v="6" class="on">6</button><button data-v="7">7</button><button data-v="8">8</button></div></div>
+      <div class="row"><span>1인당 카드</span><div class="seg" data-k="cards"><button data-v="8">8장</button><button data-v="14" class="on">14장</button><button data-v="20">20장</button><button data-v="28">28장</button></div></div>
       <div class="row"><span>봇 실력</span><div class="seg" data-k="diff"><button data-v="0">순한 맛</button><button data-v="1" class="on">보통</button><button data-v="2">독한 맛</button></div></div>
       <div class="row"><span>봇 진행 속도</span><div class="seg" data-k="speed"><button data-v="0">느긋</button><button data-v="1" class="on">보통</button><button data-v="2">빠름</button></div></div>
       <div class="row"><span>차례 자동 넘기기</span><div class="seg" data-k="auto"><button data-v="0">끔</button><button data-v="1" class="on">7초 뒤</button></div></div>
@@ -218,7 +247,7 @@ const qs=new URLSearchParams(location.search);
 const NORENDER=qs.get('norender')==='1'; // 테스트용
 
 /* ---------- 설정 ---------- */
-const cfg={seats:6,diff:1,speed:1,auto:1,instant:1,vol:.7};
+const cfg={cards:14,seats:6,diff:1,speed:1,auto:1,instant:1,vol:.7};
 const DIFF=[{lo:950,hi:1700,fp:.05},{lo:620,hi:1150,fp:.03},{lo:380,hi:720,fp:.012}];
 const SPEED=[[1500,2000],[950,1400],[550,850]];
 const WINDOW=200;           // 벨 모으는 시간(ms) — 늦게 도착한 벨을 기다림
@@ -232,7 +261,7 @@ document.querySelectorAll('.seg').forEach(seg=>{
     const b=e.target.closest('button'); if(!b)return;
     const k=seg.dataset.k; cfg[k]=+b.dataset.v;
     syncSeg(k);
-    if(k==='seats'&&role==='host')broadcastLobby();
+    if((k==='seats'||k==='cards')&&role==='host')broadcastLobby();
   });
 });
 function syncSeg(k){document.querySelectorAll('.seg[data-k="'+k+'"] button').forEach(x=>x.classList.toggle('on',+x.dataset.v===cfg[k]));}
@@ -645,11 +674,19 @@ function build2D(){
   });
   layout2D();
 }
+const z2={s:1,x:0,y:0};
+function zoom2D(f,cx,cy){
+  const vw=window.innerWidth,vh=window.innerHeight;
+  const ns=Math.max(.6,Math.min(2.6,z2.s*f)),k=ns/z2.s;
+  if(cx!=null){const ox=cx-vw/2,oy=cy-vh/2;z2.x=ox-(ox-z2.x)*k;z2.y=oy-(oy-z2.y)*k;}else{z2.x*=k;z2.y*=k;}
+  z2.s=ns;layout2D();
+}
+function reset2D(){z2.s=1;z2.x=0;z2.y=0;layout2D();}
 function layout2D(){
   if(!MODE2D||!seats.length)return;
   const vw=window.innerWidth,vh=window.innerHeight;
-  const T=Math.min(vw*.94,(vh-150)*.92,760);
-  t2d.style.width=t2d.style.height=T+'px';t2d.style.left=(vw-T)/2+'px';t2d.style.top=Math.max(40,(vh-110-T)/2+20)+'px';
+  const T=Math.min(vw*.94,(vh-150)*.92,760)*z2.s;
+  t2d.style.width=t2d.style.height=T+'px';t2d.style.left=((vw-T)/2+z2.x)+'px';t2d.style.top=(Math.max(40/z2.s,(vh-110-T)/2+20)+z2.y)+'px';
   const cw=T*(N<=4?.15:N<=6?.125:.105),ch=cw*1.4;
   b2d.style.width=b2d.style.height=(T*.24)+'px';
   seats.forEach(s=>{
@@ -686,6 +723,27 @@ function ring2D(i){
 }
 b2d.addEventListener('pointerdown',e=>{e.preventDefault();lastType=e.pointerType;playerRing();});
 b2d.addEventListener('contextmenu',e=>e.preventDefault());
+{
+  const pts=new Map();let pin=0;
+  v2d.addEventListener('pointerdown',e=>{
+    if(e.target.closest('#b2d')||e.target.closest('.s2.me .dk'))return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});try{v2d.setPointerCapture(e.pointerId);}catch(_){}
+  });
+  v2d.addEventListener('pointermove',e=>{
+    const p=pts.get(e.pointerId);if(!p)return;
+    const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(pts.size===1){if(Math.abs(dx)+Math.abs(dy)>0){z2.x+=dx;z2.y+=dy;layout2D();if(e.pointerType==='mouse')dragging=true;}}
+    else if(pts.size===2){const a=[...pts.values()],d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+      if(pin)zoom2D(d/pin,(a[0].x+a[1].x)/2,(a[0].y+a[1].y)/2);pin=d;}
+  });
+  const end=e=>{pts.delete(e.pointerId);pin=0;dragging=false;};
+  v2d.addEventListener('pointerup',end);v2d.addEventListener('pointercancel',end);
+  v2d.addEventListener('wheel',e=>{e.preventDefault();zoom2D(Math.exp(-e.deltaY*.0015),e.clientX,e.clientY);},{passive:false});
+  v2d.addEventListener('dblclick',e=>{if(!e.target.closest('#b2d'))reset2D();});
+  $('#zIn').addEventListener('click',()=>zoom2D(1.2));
+  $('#zOut').addEventListener('click',()=>zoom2D(1/1.2));
+  $('#zRe').addEventListener('click',reset2D);
+}
 
 /* ---------- 트윈 ---------- */
 let tweens=[], temps=[];
@@ -748,6 +806,7 @@ function startLocal(ev){
   buildSeats(ev.seats);
   seats.forEach((s,i)=>{s.deck=ev.decks[i].map(dec);s.pile=[];s.active=true;refresh(s);});
   phase='idle';turn=0;flying=false;ver=0;landAt=0;outOrder=[];bellLock=false;alarm.intensity=0;needHome=true;away=0;
+  document.body.classList.add('ing');
   ['#ovEnd','#ovLobby','#ovStart','#ovSet','#ovMsg'].forEach(k=>$(k).classList.add('hide'));
   banner(seats[0].i===my?'첫 장은 당신부터':'첫 장은 '+seats[0].name+'부터','good',N+'명 · 1인당 '+seats[0].deck.length+'장');
   updateUI();
@@ -853,16 +912,16 @@ function emit(ev){apply(ev);broadcast(ev);}
 function clearHostTimers(){clearTimeout(turnTimer);clearTimeout(winTimer);ringTimers.forEach(clearTimeout);ringTimers=[];bells=[];awaiting=false;}
 
 function deal(n){
-  const sets=n<=6?1:2,all=[];
+  const want=cfg.cards||14,sets=Math.max(1,Math.ceil(want*n/56)),all=[];
   for(let k=0;k<sets;k++)FRUITS.forEach(f=>[1,1,1,1,1,2,2,2,3,3,3,4,4,5].forEach(v=>all.push({f,n:v})));
-  shuffle(all);const per=Math.floor(all.length/n),out=[];
+  shuffle(all);const per=Math.min(want,Math.floor(all.length/n)),out=[];
   for(let i=0;i<n;i++)out.push(all.slice(i*per,i*per+per).map(enc));
   return out;
 }
 function hostStartGame(){
   clearHostTimers();
   const humans=players.slice(0,8).map(p=>Object.assign({},p));
-  const total=Math.max(cfg.seats,humans.length);
+  const total=Math.max(cfg.seats||humans.length,humans.length,2);
   const used=new Set();
   humans.forEach(p=>{if(used.has(p.ch)){const f=ROSTER.findIndex((_,k)=>!used.has(k));if(f>=0)p.ch=f;}used.add(p.ch);});
   const free=ROSTER.map((_,k)=>k).filter(k=>!used.has(k));shuffle(free);
@@ -986,7 +1045,7 @@ function peerOpts(){
 }
 function genCode(){const A='ABCDEFGHJKLMNPQRSTUVWXYZ';let s='';for(let i=0;i<4;i++)s+=A[Math.random()*A.length|0];return s;}
 function inviteLink(){const u=new URL(location.href);u.searchParams.set('room',roomCode);return u.toString();}
-function lobbyPayload(){return {t:'lobby',players:players.map(p=>({name:p.name,ch:p.ch,host:p.pid==='host'})),seats:cfg.seats,inGame:phase!=='idle'&&phase!=='over'&&seats.length>0&&role==='host'&&gameStarted};}
+function lobbyPayload(){return {t:'lobby',cards:cfg.cards,players:players.map(p=>({name:p.name,ch:p.ch,host:p.pid==='host'})),seats:cfg.seats,inGame:phase!=='idle'&&phase!=='over'&&seats.length>0&&role==='host'&&gameStarted};}
 let gameStarted=false;
 function broadcastLobby(){if(role!=='host')return;const p=lobbyPayload();broadcast(p);renderLobby(p);}
 
@@ -1032,10 +1091,21 @@ function onClientMsg(c,m){
     if(gameStarted&&phase!=='over')send(c,{t:'wait'});
     return;
   }
+  if(m.t==='chat'){hostChat(c.peer,m.text);return;}
   const i=seats.findIndex(s=>s.pid===c.peer&&!s.bot);if(i<0)return;
   if(m.t==='flip')hostFlip(i);
   else if(m.t==='bell')hostBell(i,m.v,m.rt);
   else if(m.t==='foul')hostFoul(i);
+}
+const chatLast=new Map();
+function hostChat(pid,text){
+  text=String(text||'').replace(/\s+/g,' ').trim().slice(0,80);if(!text)return;
+  const now=Date.now();if(now-(chatLast.get(pid)||0)<400)return;chatLast.set(pid,now);
+  const p=players.find(x=>x.pid===pid);if(!p)return;
+  const seat=seats.find(s=>s.pid===pid&&!s.bot);
+  const dead=gameStarted&&(!seat||!seat.active);
+  const ev={t:'chat',name:p.name,text,dead,me:pid};
+  broadcast(ev);addChat(ev);
 }
 function dropConn(c){
   if(!conns.has(c.peer))return;
@@ -1074,6 +1144,7 @@ function onHostMsg(m){
   hostSeen=Date.now();
   if(m.t==='ping')return;
   if(m.t==='lobby'){renderLobby(m);return;}
+  if(m.t==='chat'){addChat(m);return;}
   if(m.t==='reject'){netOk=false;lost('들어갈 수 없다',m.why);return;}
   if(m.t==='wait'){showLobby();setNet('게임이 진행 중이다 — 다음 판부터 참여');return;}
   if(m.t==='start')gameStarted=true;
@@ -1091,9 +1162,10 @@ function renderLobby(p){
   const ul=$('#plist');ul.innerHTML='';
   p.players.forEach(x=>{const li=document.createElement('li');const a=document.createElement('span');a.textContent=x.name+(x.host?' (방장)':'');
     const b=document.createElement('span');b.textContent=ROSTER[x.ch%ROSTER.length].n;li.append(a,b);ul.append(li);});
-  const bots=Math.max(0,(p.seats||cfg.seats)-p.players.length);
+  const st=p.seats!=null?p.seats:cfg.seats,bots=st===0?Math.max(0,2-p.players.length):Math.max(0,st-p.players.length);
   if(bots){const li=document.createElement('li');li.innerHTML='<span style="color:#8d826c">빈자리 '+bots+'개는 봇이 앉는다</span><span></span>';ul.append(li);}
-  if(role==='client'&&p.seats){cfg.seats=p.seats;}
+  if(role==='client'&&p.seats!=null){cfg.seats=p.seats;}
+  if(p.cards){const c=$('#lbCards');if(c)c.textContent='1인당 카드 '+p.cards+'장';}
 }
 function lost(t,p){
   if(role==='client'){netOk=false;try{peer.destroy();}catch(_){}}
@@ -1102,6 +1174,28 @@ function lost(t,p){
   ['#ovEnd','#ovLobby','#ovStart','#ovSet'].forEach(k=>$(k).classList.add('hide'));
   $('#ovMsg').classList.remove('hide');
 }
+
+/* 채팅 */
+const chatEl=$('#chat'),chatLog=$('#chatLog'),chatIn=$('#chatIn'),chatBtn=$('#chatBtn');
+function addChat(m){
+  const d=document.createElement('div');d.className='cm'+(m.dead?' dead':'');
+  const b=document.createElement('b');b.textContent=m.name+(m.dead?' (관전)':'');d.append(b,String(m.text));
+  chatLog.append(d);while(chatLog.children.length>60)chatLog.firstChild.remove();
+  chatLog.scrollTop=chatLog.scrollHeight;
+  setTimeout(()=>d.classList.add('old'),9000);
+  if(!chatEl.classList.contains('open')&&m.me!==myChatId())chatBtn.classList.add('new');
+  if(m.me!==myChatId())tone(1500,.08,'sine',.05);
+}
+function myChatId(){return role==='host'?'host':(peer&&peer.id);}
+function openChat(focus){chatEl.classList.add('open');chatBtn.classList.remove('new');chatLog.scrollTop=chatLog.scrollHeight;if(focus)chatIn.focus();}
+function closeChat(){chatEl.classList.remove('open');chatIn.blur();}
+chatBtn.addEventListener('click',()=>chatEl.classList.contains('open')?closeChat():openChat(true));
+$('#chatForm').addEventListener('submit',e=>{
+  e.preventDefault();const t=chatIn.value.trim();chatIn.value='';
+  if(t){if(role==='host')hostChat('host',t);else send(hostConn,{t:'chat',text:t});}
+  if(lastType==='mouse')closeChat();else chatIn.focus();
+});
+chatIn.addEventListener('keydown',e=>{if(e.key==='Escape')closeChat();e.stopPropagation();});
 
 /* 캐릭터 선택 */
 const cp=$('#charPick');
@@ -1181,7 +1275,8 @@ window.addEventListener('keydown',e=>{
   if(e.repeat||e.target.tagName==='INPUT')return;
   if(e.code==='Space')e.preventDefault();
   else if(e.code==='KeyR')Object.assign(cam,CAM0);
-  else if(e.code==='KeyF'||e.code==='Enter'){if(document.activeElement&&document.activeElement.tagName==='BUTTON')document.activeElement.blur();e.preventDefault();playerFlip();}
+  else if(e.code==='Enter'&&gameStarted){e.preventDefault();openChat(true);}
+  else if(e.code==='KeyF'){if(document.activeElement&&document.activeElement.tagName==='BUTTON')document.activeElement.blur();e.preventDefault();playerFlip();}
 });
 function track(e){lastType=e.pointerType;if(e.pointerType==='mouse'){mx=e.clientX;my_=e.clientY;inWin=true;}}
 let hoverBell=false;
